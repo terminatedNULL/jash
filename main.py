@@ -118,7 +118,7 @@ if __name__ == "__main__":
             print(f"Applied {exclude_num} exclude path{"s" if exclude_num != 1 else ""}.")
 
         t_len = tree.tree_len(file_map)
-        print(f"Total of {t_len} file{"s" if t_len != 1 else ""} from {jar} after filtering.")
+        print(f"Total of {t_len} file{'s' if t_len != 1 else ''} from {jar} after filtering.")
 
         # print(f"Generating stubs for {jar}...")
         # print(f" - Generating stubs for {file}...")
