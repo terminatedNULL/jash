@@ -103,7 +103,7 @@ if __name__ == "__main__":
                 if not tree.remove_from_tree(file_map, path):
                     raise Exception(f"The exclude path '{'.'.join(path)}' does not exist in {jar}.")
 
-            print(f"Applied {exclude_num} exclude path{"s" if exclude_num != 1 else ""} from {args.exclude}.")
+            print(f"Applied {exclude_num} exclude path{'s' if exclude_num != 1 else ''} from {args.exclude}.")
         elif args.exclude_list:
             if not isinstance(args.exclude_list, list):
                 args.exclude_list = [args.exclude_list]
@@ -115,7 +115,7 @@ if __name__ == "__main__":
                 if not tree.remove_from_tree(file_map, path.split(".")):
                     raise Exception(f"The exclude path '{path}' does not exist in {jar}.")
 
-            print(f"Applied {exclude_num} exclude path{"s" if exclude_num != 1 else ""}.")
+            print(f"Applied {exclude_num} exclude path{'s' if exclude_num != 1 else ''}.")
 
         t_len = tree.tree_len(file_map)
         print(f"Total of {t_len} file{'s' if t_len != 1 else ''} from {jar} after filtering.")
