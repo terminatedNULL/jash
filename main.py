@@ -2,11 +2,11 @@ import argparse
 import os
 import tempfile
 import shutil
-from typing import List
 
-import fio
-import tree
-from fio import check_file_access
+from utils.utils import generator
+from utils import progress_counter, tree, fio
+from utils.fio import check_file_access
+from utils.utils import collect_java_data, propagate_java_data
 
 """
 Jython Advanced Syntax Highlighter (JASH)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         if code != 0:
             raise Exception(f"Failed to decompile {jar}.")
 
-        file_count, file_map = tree.build_java_file_tree(temp_dir)
+        file_count, file_tree = tree.build_java_file_tree(temp_dir)
         print(f"Found {file_count} compatible files in {jar}.\n")
 
         # Mutually include or exclude files from the tree.py
@@ -66,10 +66,10 @@ if __name__ == "__main__":
                     include_paths.append(line.split("."))
 
             for path in include_paths:
-                if not tree.path_exists(file_map, path):
+                if not tree.path_exists(file_tree, path):
                     raise Exception(f"The include path '{'.'.join(path)}' does not exist in {jar}.")
 
-            tree.keep_only_included(file_map, include_paths)
+            tree.keep_only_included(file_tree, include_paths)
             include_num = len(include_paths)
             print(f"Applied {include_num} include path{'s' if include_num != 1 else ''} from {args.include}.")
 
@@ -79,10 +79,10 @@ if __name__ == "__main__":
             include_paths = [p.split(".") for p in args.include_list]
 
             for path in include_paths:
-                if not tree.path_exists(file_map, path):
+                if not tree.path_exists(file_tree, path):
                     raise Exception(f"The include path '{'.'.join(path)}' does not exist in {jar}.")
 
-            tree.keep_only_included(file_map, include_paths)
+            tree.keep_only_included(file_tree, include_paths)
             include_num = len(include_paths)
             print(f"Applied {include_num} include path{'s' if include_num != 1 else ''}.")
 
@@ -100,7 +100,7 @@ if __name__ == "__main__":
             exclude_num = len(exclude_paths)
 
             for path in exclude_paths:
-                if not tree.remove_from_tree(file_map, path):
+                if not tree.remove_from_tree(file_tree, path):
                     raise Exception(f"The exclude path '{'.'.join(path)}' does not exist in {jar}.")
 
             print(f"Applied {exclude_num} exclude path{'s' if exclude_num != 1 else ''} from {args.exclude}.")
@@ -112,13 +112,32 @@ if __name__ == "__main__":
 
             print(f"Parsing exclude paths...")
             for path in args.exclude_list:
-                if not tree.remove_from_tree(file_map, path.split(".")):
+                if not tree.remove_from_tree(file_tree, path.split(".")):
                     raise Exception(f"The exclude path '{path}' does not exist in {jar}.")
 
             print(f"Applied {exclude_num} exclude path{'s' if exclude_num != 1 else ''}.")
 
-        t_len = tree.tree_len(file_map)
+        t_len = tree.tree_len(file_tree)
         print(f"Total of {t_len} file{'s' if t_len != 1 else ''} from {jar} after filtering.")
 
-        # print(f"Generating stubs for {jar}...")
-        # print(f" - Generating stubs for {file}...")
+        # Collect initial data
+        print("Collecting initial java data...")
+        counter = progress_counter.ProgressCounter(t_len)
+        for path, file in tree.iter_tree_files(file_tree):
+            collect_java_data(file, temp_dir, path)
+            counter.increment()
+        counter.complete()
+
+        # Propagate known data to unknown references
+        print("Propagating java data...")
+        counter = progress_counter.ProgressCounter(t_len)
+        for path, file in tree.iter_tree_files(file_tree):
+            propagate_java_data()
+            counter.increment()
+        counter.complete()
+
+        # Generate python stub files
+        print("Generating python files...")
+        generator.generate_python_files("./test_dir/")
+
+        print("Successfully generated all files.")

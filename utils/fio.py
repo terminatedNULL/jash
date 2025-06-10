@@ -3,13 +3,29 @@ import subprocess
 from subprocess import CompletedProcess
 from typing import List, Tuple
 
+
 class FileTypeMismatchError(Exception):
     """Raised when a path exists but is not a regular file."""
     pass
 
+
 class FileAccessError(Exception):
     """Raised when a file cannot be accessed."""
     pass
+
+
+def set_conversion(obj):
+    """
+    Recursively convert sets to lists for JSON serialization.
+    """
+    if isinstance(obj, dict):
+        return {k: set_conversion(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [set_conversion(i) for i in obj]
+    elif isinstance(obj, set):
+        return list(obj)
+    else:
+        return obj
 
 
 def check_file_access(path: str) -> None:
@@ -30,6 +46,7 @@ def check_file_access(path: str) -> None:
         raise FileNotFoundError(f"The file '{path}' does not exist or could not be located.")
     elif not os.access(path, os.R_OK):
         raise FileAccessError(f"The file '{path}' is not accessible.")
+
 
 def run_command(cmd: List[str]) -> Tuple[int, str]:
     """

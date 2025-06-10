@@ -3,10 +3,9 @@ import os
 
 import javalang.parse
 
-import fio
+from utils import fio
 from java_model.jash_annotation import JashAnnotation
 from java_model.jash_class import JashClass
-from java_model.jash_type import JashType
 
 java_data = {}
 unknown_references = {}
