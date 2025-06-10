@@ -1,0 +1,2 @@
+class JashAnnotation:
+    pass
