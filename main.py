@@ -3,8 +3,10 @@ import os
 import tempfile
 import shutil
 
+from stdlib_generator import download_stdlib, generate_stdlib
 from generator import propagate_java_data, collect_java_data, generate_python_files
-from utils import progress_counter, tree, fio
+from utils import tree, fio
+from cli import progress_counter
 from utils.fio import check_file_access
 
 """
@@ -17,7 +19,7 @@ enable accurate syntax highlighting and autocompletion.
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description="Jython Advanced Syntax Highlighter (JASH)")
-    arg_parser.add_argument("-i", "--input", nargs="+", help="The jar file to generate stubs for.")
+    arg_parser.add_argument("-i", "--input", help="The jar file to generate stubs for.")
 
     inc_ex_group = arg_parser.add_mutually_exclusive_group()
     inc_ex_group.add_argument("-ex", "--exclude", help="The exclude jar paths file to use during generation.")
@@ -25,6 +27,7 @@ if __name__ == "__main__":
     inc_ex_group.add_argument("-inc", "--include", help="The include jar paths file to use during generation.")
     inc_ex_group.add_argument("-incl", "--include-list", nargs="+", help="List of internal jar directories to include during generation")
 
+    arg_parser.add_argument("--stdlib", action="store_true", help="Generates all standard library stubs.")
     args = arg_parser.parse_args()
 
     # Create temp directory
@@ -33,6 +36,11 @@ if __name__ == "__main__":
         shutil.rmtree(temp_dir)
     os.makedirs(temp_dir)
     print(f"Using temp directory: {temp_dir}\n")
+
+    if args.stdlib:
+        download_stdlib(temp_dir)
+        generate_stdlib(temp_dir)
+        exit(1)
 
     # Check for valid java installation
     code, output = fio.run_command(["java", "-version"])

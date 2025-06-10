@@ -3,6 +3,7 @@ import os
 
 import javalang.parse
 
+import generator_options
 from generator_options import GeneratorOptions
 from java_model.jash_expression import JashExpression
 from java_model.jash_type import JashType
@@ -13,9 +14,7 @@ from java_model.jash_class import JashClass
 
 java_data = {}
 unknown_references = {}
-
 options = GeneratorOptions()
-import_req = []
 
 
 class DataType(enum.Enum):
@@ -24,7 +23,7 @@ class DataType(enum.Enum):
     METHOD = 2
 
 
-def collect_java_data(file: str, temp_path: str, path: list[str]) -> None:
+def collect_java_data(file: str, base_path: str, path: list[str]) -> None:
     """
     Collects all pertinent data from a given Java file.
 
@@ -32,13 +31,13 @@ def collect_java_data(file: str, temp_path: str, path: list[str]) -> None:
 
     Args:
         file: The name of the java file.
-        temp_path: The path to the temp file directory.
+        base_path: The path to the temp starting directory.
         path: The path to the java file.
     """
-    absolute_path = "/".join([temp_path] + path + [file + ".java"])
+    absolute_path = "/".join([base_path] + path + [file + ".java"])
     fio.check_file_access(absolute_path)
+    generator_options.import_req = {}
 
-    file_tree = None
     with (open(absolute_path, "r") as f):
         try:
             file_tree: javalang.parser.tree.CompilationUnit = javalang.parse.parse(f.read())
@@ -133,9 +132,11 @@ def collect_java_data(file: str, temp_path: str, path: list[str]) -> None:
 
                 java_data[file] = classes
         except javalang.parser.JavaSyntaxError as e:
-            raise Exception(f"Syntax error encountered while parsing {file}.java.\n\t- {e}")
+            print(absolute_path)
+            # raise Exception(f"Syntax error encountered while parsing {absolute_path}.\n\t- {e}")
         except Exception as e:
-            raise Exception(f"Unknown error encountered while parsing {file}.java.\n\t- {e}")
+            print(absolute_path)
+            # raise Exception(f"Unknown error encountered while parsing {absolute_path}.\n\t- {e}")
 
 
 def propagate_java_data():
@@ -147,4 +148,7 @@ def generate_python_files(save_dir: str):
 
     for file, data in java_data.items():
         with open(os.path.join(save_dir, file + ".py"), "w") as f:
-            f.write(str(data[file]))
+            if file in data:
+                f.write(str(data[file]))
+            else:
+                print(file)

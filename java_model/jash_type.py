@@ -1,4 +1,4 @@
-import generator
+from generator_options import import_req
 from java_model.jash_type_parameter import JashTypeParameter
 
 
@@ -23,12 +23,6 @@ class JashType:
         self.implements = implements
         self.sub_type = sub_type
         self.name = name or ""
-
-        if name != "":
-            res = import_map.get(name, None)
-
-            if res:
-                generator.import_req.append(res)
 
     def __str__(self):
         return f"{self.name}"
