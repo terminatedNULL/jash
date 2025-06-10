@@ -3,12 +3,19 @@ import os
 
 import javalang.parse
 
+from generator_options import GeneratorOptions
+from java_model.jash_expression import JashExpression
+from java_model.jash_type import JashType
+from java_model.jash_variable import JashVariable
 from utils import fio
 from java_model.jash_annotation import JashAnnotation
 from java_model.jash_class import JashClass
 
 java_data = {}
 unknown_references = {}
+
+options = GeneratorOptions()
+import_req = []
 
 
 class DataType(enum.Enum):
@@ -52,36 +59,40 @@ def collect_java_data(file: str, temp_path: str, path: list[str]) -> None:
                 )
 
                 # Member variable
-            #     for path, node in file_tree.filter(javalang.parser.tree.FieldDeclaration):
-            #         class_name = None
-            #         for ancestor in reversed(path):
-            #             if isinstance(ancestor, javalang.parser.tree.ClassDeclaration):
-            #                 class_name = ancestor.name
-            #                 break
-            #
-            #         if class_name:
-            #             for decl in node.declarators:
-            #                 # print(f"Variable | {str(node)}\n\n")
-            #                 field_info = {
-            #                     "name": decl.name,
-            #                     "type": getattr(node.type, 'name', str(node.type)),
-            #                     "modifiers": node.modifiers,
-            #                     "position": node.position
-            #                 }
-            #
-            #                 try:
-            #                     classes[class_name].setdefault("fields", []).append(field_info)
-            #                 except KeyError:
-            #                     if class_name not in unknown_references:
-            #                         unknown_references[class_name] = []
-            #                     unknown_references[class_name].append({
-            #                         "file": file,
-            #                         "path": path,
-            #                         "inner_path": [
-            #                             (class_name, DataType.CLASS),
-            #                             (field_info["name"], DataType.FIELD)
-            #                         ]
-            #                     })
+                for path, node in file_tree.filter(javalang.parser.tree.FieldDeclaration):
+                    class_name = None
+                    for ancestor in reversed(path):
+                        if isinstance(ancestor, javalang.parser.tree.ClassDeclaration):
+                            class_name = ancestor.name
+                            break
+
+                    if class_name:
+                        for decl in node.declarators:
+                            if class_name in classes:
+                                classes[class_name].body.append(
+                                    JashVariable(
+                                        str(decl.name),
+                                        JashType(str(getattr(node.type, 'name', str(node.type)))),
+                                        JashExpression(),
+                                        [str(m) for m in list(node.modifiers)],
+                                        [JashAnnotation(str(a)) for a in node.annotations],
+                                        str(node.documentation)
+                                    )
+                                )
+                                continue
+
+                            # Handle class not found case
+                            # if class_name not in unknown_references:
+                            #     unknown_references[class_name] = []
+                            # unknown_references[class_name].append({
+                            #     "file": file,
+                            #     "path": path,
+                            #     "inner_path": [
+                            #         (class_name, DataType.CLASS),
+                            #         (field_info["name"], DataType.FIELD)
+                            #     ]
+                            # })
+
             #
             # # Constructors
             # for path, node in file_tree.filter(javalang.parser.tree.ConstructorDeclaration):

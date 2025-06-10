@@ -1,5 +1,10 @@
+import generator
 from java_model.jash_type_parameter import JashTypeParameter
-from utils.utils import default
+
+
+import_map = {
+    "List": "typing"
+}
 
 
 class JashType:
@@ -12,9 +17,18 @@ class JashType:
             dimensions: list[int] = None,
             parameters: list[JashTypeParameter] = None
     ):
-        self.parameters = default(parameters, [])
-        self.dimensions = default(dimensions, [])
-        self.modifiers = default(modifiers, [])
+        self.parameters = parameters or []
+        self.dimensions = dimensions or []
+        self.modifiers = modifiers or []
         self.implements = implements
         self.sub_type = sub_type
-        self.name = default(name, "")
+        self.name = name or ""
+
+        if name != "":
+            res = import_map.get(name, None)
+
+            if res:
+                generator.import_req.append(res)
+
+    def __str__(self):
+        return f"{self.name}"

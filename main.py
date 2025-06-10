@@ -3,10 +3,9 @@ import os
 import tempfile
 import shutil
 
-from utils.utils import generator
+from generator import propagate_java_data, collect_java_data, generate_python_files
 from utils import progress_counter, tree, fio
 from utils.fio import check_file_access
-from utils.utils import collect_java_data, propagate_java_data
 
 """
 Jython Advanced Syntax Highlighter (JASH)
@@ -138,6 +137,6 @@ if __name__ == "__main__":
 
         # Generate python stub files
         print("Generating python files...")
-        generator.generate_python_files("./test_dir/")
+        generate_python_files("./test_dir/")
 
         print("Successfully generated all files.")

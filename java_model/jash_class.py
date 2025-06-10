@@ -6,7 +6,7 @@ from java_model.jash_annotation import JashAnnotation
 from java_model.jash_method import JashMethod
 from java_model.jash_type import JashType
 from java_model.jash_variable import JashVariable
-from utils.utils import default
+from utils.utils import str_default
 
 
 class JashClass:
@@ -21,27 +21,18 @@ class JashClass:
             modifiers: list[str] = None,
             type_parameters: list[JashType] = None
     ):
-        """
-        Creates a new JashClass instance
-
-        Args:
-            _annotations: All class annotations.
-            body: All definitions and declarations within the class.
-            documentation: Any documentation comments on the class.
-            extends: All types the class extends.
-        """
-        self.name = default(name, "")
-        self.type_parameters = default(type_parameters, [])
-        self.modifiers = default(modifiers, [])
+        self.name = name or ""
+        self.type_parameters = type_parameters or []
+        self.modifiers = modifiers or []
         self.implements = implements
         self.extends = extends
-        self.documentation = default(documentation, "", True)
-        self.body = default(body, [])
-        self.annotations = default(_annotations, [])
+        self.documentation = str_default(documentation, "")
+        self.body = body or []
+        self.annotations = _annotations or []
 
     def __str__(self):
         annotation_str = '\n'.join(str(a) for a in self.annotations).strip()
-        body_decls = '\n\n'.join(textwrap.indent(str(b), "    ") for b in self.body).strip()
+        # body_decls = '\n'.join(textwrap.indent(str(b), "    ") for b in self.body).strip()
         doc = textwrap.indent(self.documentation.strip(), "    ") if self.documentation else ""
 
         lines = []
@@ -55,9 +46,9 @@ class JashClass:
         if doc:
             lines.append(doc)
 
-        if body_decls:
-            lines.append(body_decls)
-        else:
-            lines.append("    pass")
+        # if body_decls:
+        #     lines.append(body_decls)
+        # else:
+        lines.append("    pass")
 
         return '\n\n' + '\n'.join(lines) + '\n'
