@@ -13,7 +13,7 @@ These stub files allow for accurate syntax highlighting and code completion, whi
 Due to Jython's import resolution methods, Jython imports are prioritized over local imports, meaning that the real Jython files
 will be targeted during compilation.
 
-JASH includes tools for generation size estimation, generation targeting, and built-in [Java standard library](https://github.com/openjdk/jdk/tree/master/src/java.base/share/classes) generation.
+JASH includes tools for [generation size estimation](https://github.com/terminatedNULL/jash/issues/1), generation targeting, and built-in [Java standard library](https://github.com/openjdk/jdk/tree/master/src/java.base/share/classes) generation.
 
 [^1]: This is useful for restricted developent environments, custom Jython installations, or for those who wish to develop 
 using Jython in a Python IDE.
