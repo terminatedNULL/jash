@@ -6,7 +6,7 @@ from java_model.jash_annotation import JashAnnotation
 from java_model.jash_method import JashMethod
 from java_model.jash_type import JashType
 from java_model.jash_variable import JashVariable
-from utils.utils import str_default
+from utils.utils import str_default, format_documentation
 from utils.utils import condense_imports
 from generator_options import import_req
 
@@ -51,7 +51,7 @@ class JashClass:
         lines.append(class_def)
 
         if doc:
-            lines.append(doc)
+            lines.append(format_documentation(doc))
 
         if body_decls:
             lines.append(body_decls)
