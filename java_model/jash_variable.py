@@ -1,4 +1,4 @@
-import generator
+from generator import generator
 from java_model.jash_annotation import JashAnnotation
 from java_model.jash_expression import JashExpression
 from java_model.jash_type import JashType

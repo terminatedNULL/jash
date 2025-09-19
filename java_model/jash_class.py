@@ -8,7 +8,7 @@ from java_model.jash_type import JashType
 from java_model.jash_variable import JashVariable
 from utils.utils import str_default, format_documentation
 from utils.utils import condense_imports
-from generator_options import import_req
+from generator.generator_options import import_req
 
 
 class JashClass:
