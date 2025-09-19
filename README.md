@@ -7,13 +7,13 @@
 The Jython Advanced Syntax Highlighter (JASH) is a tool for jython development in limited or python-only environments.
 JASH takes inputted JAR files, decompiles them, and generates python "stub" files in the exact file structure as in the JAR.
 Each of the generated stub files are all variables, classes, and functions from the original Java code, but stripped of their internal logic.
-These definitions are fully typed, including any exceptions and class heirarchy.
+These definitions are fully typed, including any exceptions and class hierarchy.
 
 These stub files allow for accurate syntax highlighting and code completion, while not requiring a full Jython environment [^1].
 Due to Jython's import resolution methods, Jython imports are prioritized over local imports, meaning that the real Jython files
 will be targeted during compilation.
 
-JASH includes tools for generation size estimation, generation targeting, and built-in [Java standard library](https://github.com/openjdk/jdk/tree/master/src/java.base/share/classes) generation.
+JASH includes tools for [generation size estimation](https://github.com/terminatedNULL/jash/issues/1), generation targeting, and built-in [Java standard library](https://github.com/openjdk/jdk/tree/master/src/java.base/share/classes) generation.
 
-[^1]: This is useful for restricted developent environments, custom Jython installations, or for those who wish to develop 
+[^1]: This is useful for restricted developmet environments, custom Jython installations, or for those who wish to develop 
 using Jython in a Python IDE.

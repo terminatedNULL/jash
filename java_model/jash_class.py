@@ -34,7 +34,7 @@ class JashClass:
 
     def __str__(self):
         annotation_str = "\n".join(str(a) for a in self.annotations).strip()
-        body_decls = "\n".join(textwrap.indent(str(b), "    ") for b in self.body).strip()
+        body_decls = "    " + "\n".join(textwrap.indent(str(b), "    ", lambda line: True) for b in self.body).strip()
         doc = textwrap.indent(self.documentation.strip(), "    ") if self.documentation else ""
         import_str = "\n".join([f"from {key} import {','.join(value)}"
                                 for key, value in condense_imports(import_req).items()])
@@ -53,7 +53,7 @@ class JashClass:
         if doc:
             lines.append(format_documentation(doc))
 
-        if body_decls:
+        if len(body_decls.strip()) > 0:
             lines.append(body_decls)
         else:
             lines.append("    pass")

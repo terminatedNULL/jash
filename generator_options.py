@@ -1,4 +1,4 @@
-import_req: list[tuple[str, str]] = []
+import_req: dict[str, str] = {}
 """
 Stores the list of required imports for the generated python code.
 

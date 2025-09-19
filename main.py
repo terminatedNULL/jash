@@ -1,9 +1,11 @@
 import argparse
+import json
 import os
 import tempfile
 import shutil
 
-from stdlib_generator import download_stdlib, generate_stdlib
+import generator
+from stdlib_generator import generate_stdlib, list_stdlib_versions, download_online_stdlib
 from generator import propagate_java_data, collect_java_data, generate_python_files
 from utils import tree, fio
 from cli import progress_counter
@@ -12,22 +14,39 @@ from utils.fio import check_file_access
 """
 Jython Advanced Syntax Highlighter (JASH)
 
-A tool used to generate typed python code stubs to
+A tool for generating typed python code stubs to
 enable accurate syntax highlighting and autocompletion.
 """
+
+STDLIB_PREFIX = "https://github.com/openjdk/"
+STDLIB_POSTFIX = "/archive/master.zip"
 
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description="Jython Advanced Syntax Highlighter (JASH)")
-    arg_parser.add_argument("-i", "--input", help="The jar file to generate stubs for.")
+    arg_parser.add_argument("-i", "--input", nargs="+", help="The jar files to generate stubs for.")
+    arg_parser.add_argument("-o", "--output", help="The directory to generate the stubs to.")
 
     inc_ex_group = arg_parser.add_mutually_exclusive_group()
     inc_ex_group.add_argument("-ex", "--exclude", help="The exclude jar paths file to use during generation.")
-    inc_ex_group.add_argument("-exl", "--exclude-list", nargs="+", help="List of internal jar directories to exclude during generation")
+    inc_ex_group.add_argument("-exl", "--exclude-list", nargs="+", help="List of internal jar directories to "
+                                                                        "exclude during generation")
     inc_ex_group.add_argument("-inc", "--include", help="The include jar paths file to use during generation.")
-    inc_ex_group.add_argument("-incl", "--include-list", nargs="+", help="List of internal jar directories to include during generation")
+    inc_ex_group.add_argument("-incl", "--include-list", nargs="+", help="List of internal jar directories "
+                                                                         "to include during generation")
 
-    arg_parser.add_argument("--stdlib", action="store_true", help="Generates all standard library stubs.")
+    arg_parser.add_argument("--stdlib", nargs="?", const="./", help="Generates all standard "
+                                                                                  "library stubs to the specified directory, "
+                                                                                  "defaults to jash's temp dir.")
+    arg_parser.add_argument("--stdlib-source", nargs="?", const="jdk8", help="The location of "
+                                                                                           "the java standard library to "
+                                                                                           "download from, can be a URL, "
+                                                                                           "path, or compatible version ("
+                                                                                           "see --stdlib-list).")
+    arg_parser.add_argument("--stdlib-dest", nargs="?", const="/tmp/jash/", help="The location to download "
+                                                                                            "the standard library to.")
+    arg_parser.add_argument("--stdlib-list", action="store_true", help="Lists all available standard library"
+                                                                       " versions.")
     args = arg_parser.parse_args()
 
     # Create temp directory
@@ -37,15 +56,43 @@ if __name__ == "__main__":
     os.makedirs(temp_dir)
     print(f"Using temp directory: {temp_dir}\n")
 
+    if args.stdlib_list:
+        versions = list_stdlib_versions()
+        print("Available standard library versions:")
+        for version in versions:
+            print(f"\t- {version}")
+        exit(1)
+
+    stdlib_source_path = None
+    if args.stdlib_source:
+        if not args.stdlib_dest:
+            args.stdlib_dest = temp_dir
+
+        if args.stdlib_source.startswith("http"):                                       # Web download
+            stdlib_source_path = download_online_stdlib(args.stdlib_source, args.stdlib_dest)
+        elif args.stdlib_source.startswith("jdk"):                                      # Version download
+            stdlib_source_path = download_online_stdlib(f"{STDLIB_PREFIX}{args.stdlib_source}{STDLIB_POSTFIX}", args.stdlib_dest)
+        elif os.path.exists(args.stdlib_source) and os.path.isdir(args.stdlib_source):  # Local folder
+            stdlib_source_path = args.stdlib_source
+        else:
+            raise Exception(f"The source '{args.stdlib_source}' is not a valid URL, directory, or version.")
+
     if args.stdlib:
-        download_stdlib(temp_dir)
-        generate_stdlib(temp_dir)
+        generate_stdlib(temp_dir if not args.stdlib else args.stdlib, args.output)
         exit(1)
 
     # Check for valid java installation
     code, output = fio.run_command(["java", "-version"])
     if code != 0 or "version" not in output.lower():
         raise Exception("Java is not installed or not properly configured.")
+
+    if not args.input:
+        exit(1)
+
+    if not os.path.exists(args.output):
+        os.mkdir(args.output)
+        if not os.path.exists(args.output):
+            raise Exception(f"The output directory '{args.output}' does not exist and could not be created.")
 
     # Decompile and generate jar stubs
     for jar in args.input:
@@ -145,6 +192,9 @@ if __name__ == "__main__":
 
         # Generate python stub files
         print("Generating python files...")
-        generate_python_files("./test_dir/")
+        generate_python_files(args.output)
 
-        print("Successfully generated all files.")
+        with open("type_resolver.json", "w") as f:
+            f.write(json.dumps(generator.type_resolver.to_dict()))
+
+        print(f"Successfully generated all files to {args.output}.")

@@ -1,2 +1,3 @@
 class JashTypeParameter:
-    pass
+    def to_dict(self):
+        return {}

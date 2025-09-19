@@ -1,4 +1,5 @@
 import re
+import uuid
 from typing import Any
 
 
@@ -56,15 +57,38 @@ TODO:
 
 import re
 
-import re
-
 def format_documentation(doc: str) -> str:
     converted = '\t"""'
     params = []
     returns = ""
     tags_started = False
-
     lines = [l.strip() for l in doc.split("\n")]
+
+    # Combine multi-line links into one line
+    index = 0
+    append_str = ""
+    while index < len(lines):
+        line = lines[index]
+
+        if append_str == "" and "{@" in line and "}" not in line:
+            keep, app = line.split("{@", maxsplit=1)
+            append_str = "{@" + app
+            lines[index] = keep.strip()
+            index += 1
+        elif append_str != "":
+            append_str += " " + line.strip()
+            if "}" in line:
+                before, after = append_str.split("}", maxsplit=1)
+                condensed = before + "}"
+                lines[index] = after.strip()
+                lines.insert(index, condensed.strip())
+                append_str = ""
+                index += 1
+            else:
+                lines.pop(index)
+        else:
+            index += 1
+
     for line in lines:
         temp = line
         temp = temp.removeprefix("/**").removesuffix("*/").lstrip("*").strip()
@@ -118,3 +142,152 @@ def format_documentation(doc: str) -> str:
         converted += f"\n\tReturns:\n\t\t{returns}\n"
 
     return converted + '\n\t"""'
+
+METHOD_SIGNATURE_REGEX = re.compile(
+    r"(?:public|protected|private|static|final|native|synchronized|abstract|default|strictfp|\s)*(?:<[^>]+>\s+)?(?:[A-Za-z0-9_<>\[\].]+)?\s+\b(?!if\b|for\b|while\b|switch\b|catch\b)[A-Za-z0-9_]+\s*\([^)]*\)(?:\s*throws\s+[A-Za-z0-9_.,\s]+)?\s*(?=\{)",
+    re.DOTALL
+)
+""" A regex matching a java function signature. """
+
+STR_INITIALIZATION_REGEX = re.compile(
+    r'(?:String|var)\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*(?:(?:"(?:\\.|[^"\\])*")|\s*\+\s*[A-Za-z_][A-Za-z0-9_]*)*\s*;',
+    re.DOTALL
+)
+""" A regex matching a java string initialization line. """
+
+def generate_unique_token() -> str:
+    """
+    Generates a unique token for use in text parsing.
+
+    Returns:
+        str: The unique token
+    """
+    return f"___{uuid.uuid4().hex.upper()}___"
+
+def strip_method_bodies(code: str) -> str:
+    """
+    Clears the code from all function bodies in a java code snippet.
+
+    Args:
+        code (str): The java snippet to process.
+
+    Returns:
+        str: The processed java code snippet.
+    """
+    result = []
+    token_map = {}
+    last_index = 0
+    i = 0
+
+    # Tokenize string initializations
+    for match in STR_INITIALIZATION_REGEX.finditer(code):
+        start, end = match.start(), match.end()
+        token = generate_unique_token()
+        token_map[token] = code[start:end]
+        result.append(code[last_index:start])
+        result.append(token)
+        last_index = end
+
+    result.append(code[last_index:])
+    result = ''.join(result)
+
+    # Clear string literals
+    result = re.sub(r'(?<!\')\"(?:\\.|[^\"\\])*\"', '""', result)
+
+    # Clear char literals
+    result = re.sub(r"'(?:\\.|[^'\\])'", "''", result)
+
+    # Clear function bodies
+    output = ""
+    while i < len(result):
+        m = METHOD_SIGNATURE_REGEX.search(result, i)
+        if not m:
+            output += result[i:]
+            break
+
+        output += result[i:m.end()]
+        i = m.end()
+
+        if i < len(result) and result[i] == "{":
+            output += "{"
+            brace_count = 1
+            i += 1
+            char = result[i]
+            while i < len(result) and brace_count > 0:
+                if result[i] == "{":
+                    brace_count += 1
+                elif result[i] == "}":
+                    brace_count -= 1
+                i += 1
+                char = result[i]
+            output += "}"
+
+    # Replace string initializations
+    for token in token_map:
+        output = output.replace(token, token_map[token])
+
+    return output
+
+def fix_invalid_escapes(code: str) -> str:
+    r"""
+    Replaces ``\xNN`` Unicode characters with ``\u00NN`` characters.
+
+    Args:
+        code (str): The code snippet to fix.
+
+    Returns:
+        str: The fixed code snippet.
+    """
+    return ''.join(
+        f'\\u{ord(c):04X}' if ord(c) >= 128 else c
+        for c in code
+    )
+
+def strip_inline_comments(file_contents: str) -> str:
+    """
+    Replaces inline // comments inside block comments with tokens,
+    removes standalone // lines, then restores the inline ones.
+    """
+    token_map = {}
+
+    def replacer(match):
+        prefix, inline_comment = match.groups()
+        token = f"__INLINE_COMMENT_{uuid.uuid4().hex}__"
+        token_map[token] = inline_comment
+        return prefix + token
+
+    inline_pattern = re.compile(r'(^\s*\*.*?)(//.*)', re.MULTILINE)
+    file_contents = inline_pattern.sub(replacer, file_contents)
+
+    file_contents = re.sub(r'\s*//.*', '', file_contents, flags=re.MULTILINE)
+
+    for token, inline_comment in token_map.items():
+        file_contents = file_contents.replace(token, inline_comment)
+
+    return file_contents
+
+def strip_all_comments(java_code: str) -> str:
+    """
+    Removes all Java comments (// and /* ... */), but preserves
+    strings and char literals.
+
+    Args:
+        java_code (str): Java source code as a string.
+
+    Returns:
+        str: Java code with comments removed.
+    """
+    pattern = re.compile(
+        r'("(\\"|[^"])*")|'      # string literals
+        r'(\'(\\\'|[^\'])*\')|'         # char literals
+        r'(/\*[\s\S]*?\*/)|'            # multi-line comments
+        r'(//.*?$)',                    # single-line comments
+        re.MULTILINE
+    )
+
+    def replacer(match):
+        if match.group(1) or match.group(3):
+            return match.group(0)
+        return ''
+
+    return pattern.sub(replacer, java_code)

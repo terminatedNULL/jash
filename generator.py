@@ -1,9 +1,14 @@
 import enum
 import os
-
 import javalang.parse
-
 import generator_options
+from utils.utils import strip_method_bodies, fix_invalid_escapes, strip_all_comments
+
+try:
+    import re2 as re
+except ImportError:
+    import re
+
 from generator_options import GeneratorOptions
 from java_model.jash_expression import JashExpression
 from java_model.jash_type import JashType
@@ -11,11 +16,12 @@ from java_model.jash_variable import JashVariable
 from utils import fio
 from java_model.jash_annotation import JashAnnotation
 from java_model.jash_class import JashClass
+from utils.type_resolver import TypeResolver
 
 java_data = {}
 unknown_references = {}
+type_resolver = TypeResolver()
 options = GeneratorOptions()
-
 
 class DataType(enum.Enum):
     CLASS = 0
@@ -38,18 +44,47 @@ def collect_java_data(file: str, base_path: str, path: list[str]) -> None:
     fio.check_file_access(absolute_path)
     generator_options.import_req = {}
 
-    with (open(absolute_path, "r") as f):
+    with (open(absolute_path, "r", encoding="utf-8", errors="replace") as f):
+        file_contents = f.read()
+
+        # Remove inline comments
+        file_contents = strip_all_comments(file_contents)
+
+        # Replace invalid unicode characters
+        file_contents = fix_invalid_escapes(file_contents)
+
+        # Remove all function code
+        file_contents = strip_method_bodies(file_contents)
+
         try:
-            file_tree: javalang.parser.tree.CompilationUnit = javalang.parse.parse(f.read())
+            try:
+                package = re.search(r'^\s*package\s+([a-zA-Z_][\w]*(?:\.[a-zA-Z_][\w]*)*)\s*;', file_contents).group(1).split(".")
+            except AttributeError:
+                package = []
 
+            # Map imports
+            for match in re.finditer(r"(?<=import)\s+(?:static\s+)?(.*?)(?=\s*;)", file_contents):
+                if len(match.groups()) < 1:
+                    continue
+
+                split_import = match.group(0).strip().split(".")
+                import_path = split_import[:-1]
+                import_name = split_import[-1]
+                if import_path[-1] == "*":
+                    continue
+
+                if not type_resolver.resolve_type(import_name):
+                    type_resolver.add_type(JashType(import_name), import_name, import_path)
+
+            file_tree: javalang.parser.tree.CompilationUnit = javalang.parse.parse(file_contents)
+
+
+            # Collect classes
             classes = {}
-
             for path, node in file_tree.filter(javalang.parser.tree.ClassDeclaration):
-
-                # General class data
                 classes[node.name] = JashClass(
                     node.name,
-                    [JashAnnotation(a) for a in node.annotations],
+                    [JashAnnotation(a.name, a.element) for a in node.annotations],
                     [],
                     str(node.documentation),
                     None,
@@ -57,7 +92,13 @@ def collect_java_data(file: str, base_path: str, path: list[str]) -> None:
                     []
                 )
 
-                # Member variable
+                # Map type
+                # TODO : Implement nested class handling
+                class_obj = classes[node.name]
+                if not type_resolver.resolve_type(class_obj.name):
+                    type_resolver.add_type(class_obj., class_obj.name, path)
+
+                # Member variables
                 for path, node in file_tree.filter(javalang.parser.tree.FieldDeclaration):
                     class_name = None
                     for ancestor in reversed(path):
@@ -74,7 +115,7 @@ def collect_java_data(file: str, base_path: str, path: list[str]) -> None:
                                         JashType(str(getattr(node.type, 'name', str(node.type)))),
                                         JashExpression(),
                                         [str(m) for m in list(node.modifiers)],
-                                        [JashAnnotation(str(a)) for a in node.annotations],
+                                        [JashAnnotation(a.name, a.element) for a in node.annotations],
                                         str(node.documentation)
                                     )
                                 )
@@ -132,11 +173,13 @@ def collect_java_data(file: str, base_path: str, path: list[str]) -> None:
 
                 java_data[file] = classes
         except javalang.parser.JavaSyntaxError as e:
-            print(absolute_path)
-            # raise Exception(f"Syntax error encountered while parsing {absolute_path}.\n\t- {e}")
+            with open("error_file_content.java", "w") as file:
+                file.write(file_contents)
+            raise Exception(f"Syntax error encountered while parsing {absolute_path}.\n\t- {e.description} at {e.at}")
         except Exception as e:
-            print(absolute_path)
-            # raise Exception(f"Unknown error encountered while parsing {absolute_path}.\n\t- {e}")
+            with open("error_file_content.java", "w") as file:
+                file.write(file_contents)
+            raise Exception(f"Unknown error encountered while parsing {absolute_path}.\n\t- {str(e)}")
 
 
 def propagate_java_data():

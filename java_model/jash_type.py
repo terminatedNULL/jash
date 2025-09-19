@@ -1,10 +1,4 @@
-from generator_options import import_req
 from java_model.jash_type_parameter import JashTypeParameter
-
-
-import_map = {
-    "List": "typing"
-}
 
 
 class JashType:
@@ -26,3 +20,13 @@ class JashType:
 
     def __str__(self):
         return f"{self.name}"
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "sub_type": self.sub_type.to_dict() if self.sub_type else None,
+            "implements": self.implements.to_dict() if self.implements else None,
+            "modifiers": self.modifiers,
+            "dimensions": self.dimensions,
+            "parameters": [p.to_dict() for p in self.parameters],
+        }

@@ -22,6 +22,10 @@ class JashVariable:
         self.documentation = documentation or ""
 
     def __str__(self):
-        annotation_str = '\n'.join(str(a) for a in self.annotations).strip()
-        return (f"{annotation_str}{self.name}{f': {self.type}' if generator.options.typed else ''}"
-                f"{f' = 42' if self.initializer is not None else ''}\n")
+        annotation_str = '\n'.join(str(a) for a in self.annotations).rstrip()
+        variable_str = (
+            f"{self.name}"
+            f"{f': {self.type}' if generator.options.typed else ''}"
+            f"{' = None # TODO : Initializer' if self.initializer is not None else ''}"
+        )
+        return f"{annotation_str}\n{variable_str}\n" if annotation_str else f"{variable_str}\n"

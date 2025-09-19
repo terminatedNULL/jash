@@ -9,8 +9,6 @@ from utils import tree
 from cli import progress_counter
 from cli.byte_progress_counter import ByteProgressCounter
 
-STDLIB_URL = "https://github.com/openjdk/jdk8/archive/master.zip"
-
 STDLIB_INCOMPATIBLE = [
     "module-info",
     "AbstractChronology",
@@ -33,17 +31,36 @@ STDLIB_INCOMPATIBLE = [
 ]
 
 
-def download_stdlib(target_dir: str) -> None:
+def list_stdlib_versions() -> list[str]:
+    repos = []
+    page = 1
+    while True:
+        url = f'https://api.github.com/orgs/openjdk/repos?per_page=100&page={page}'
+        response = requests.get(url)
+        if response.status_code != 200:
+            print(f"Failed to fetch data: {response.status_code}")
+            break
+
+        data = response.json()
+        if not data:
+            break
+
+        repos.extend(data)
+        page += 1
+    return [repo['name'] for repo in repos if repo['name'].lower().startswith("jdk")]
+
+
+def download_online_stdlib(source_url: str, target_dir: str) -> str:
     if os.path.exists(target_dir):
         shutil.rmtree(target_dir)
     os.makedirs(target_dir)
 
-    print(f"Downloading Java stdlib from:\n\t- {STDLIB_URL}")
+    print(f"Downloading Java stdlib from:\n\t- {source_url}")
     zip_path = os.path.join(target_dir, "stdlib.zip")
 
-    with requests.get(STDLIB_URL, stream=True) as res:
+    with requests.get(source_url, stream=True) as res:
         if res.status_code != 200:
-            raise Exception(f"Failed to download Java stdlib from {STDLIB_URL}")
+            raise Exception(f"Failed to download Java stdlib from {source_url}")
 
         content_length = res.headers.get("content-length")
         total_size = int(content_length) if content_length else None
@@ -69,18 +86,31 @@ def download_stdlib(target_dir: str) -> None:
     print("Successfully downloaded and extracted Java stdlib.")
 
     print("Verifying extracted Java stdlib...")
-    if not os.path.exists(os.path.join(extract_path, "jdk8-master/jdk/src/share/classes")):
-        raise FileNotFoundError("Unable to find extracted Java stdlib.")
-    print("Stdlib verified.\n")
+    dir_opts = os.listdir(extract_path)
+    if not any(filename.lower().startswith("jdk") for filename in dir_opts):
+        raise FileNotFoundError(f"Unable to find extracted Java stdlib at path '{extract_path}'.")
 
+    jdk_dir = next((x for x in dir_opts if x.lower().startswith("jdk")), None)
+    full_jdk_path_a = os.path.join(extract_path, jdk_dir, "jdk/src/")
+    full_jdk_path_b = os.path.join(extract_path, jdk_dir, "src/")
+    final_jdk_path = None
 
-def generate_stdlib(target_dir: str) -> None:
-    stdlib_path = os.path.join(target_dir, "stdlib/jdk8-master/jdk/src/share/classes")
-    if not os.path.exists(stdlib_path):
+    if os.path.exists(full_jdk_path_a):
+        final_jdk_path = full_jdk_path_a
+    elif os.path.exists(full_jdk_path_b):
+        final_jdk_path = full_jdk_path_b
+    else:
+        raise FileNotFoundError(f"Unable to find extracted Java stdlib at path '{full_jdk_path_a}' or '{full_jdk_path_b}'.")
+
+    print(f"Stdlib verified, located at '{final_jdk_path}'.\n")
+    return final_jdk_path
+
+def generate_stdlib(source_dir: str, dest_dir: str) -> None:
+    if not os.path.exists(source_dir):
         raise FileNotFoundError("Unable to find Java stdlib, please try re-downloading.")
 
     print("Generating stubs for Java stdlib...")
-    file_count, file_tree = tree.build_java_file_tree(stdlib_path)
+    file_count, file_tree = tree.build_java_file_tree(source_dir)
     print(f"Found {file_count} compatible files in stdlib.\n")
 
     t_len = tree.tree_len(file_tree)
@@ -90,7 +120,7 @@ def generate_stdlib(target_dir: str) -> None:
     counter = progress_counter.ProgressCounter(t_len)
     for path, file in tree.iter_tree_files(file_tree):
         if not file in STDLIB_INCOMPATIBLE:
-            collect_java_data(file, stdlib_path, path)
+            collect_java_data(file, source_dir, path)
             counter.increment()
     counter.complete()
 
@@ -104,7 +134,7 @@ def generate_stdlib(target_dir: str) -> None:
 
     # Generate python stub files
     print("Generating python files...")
-    generate_python_files("./test_dir/")
+    generate_python_files(dest_dir)
 
     print("Successfully generated all files.")
 
