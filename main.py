@@ -5,7 +5,7 @@ import tempfile
 import shutil
 
 import generator
-from stdlib_generator import generate_stdlib, list_stdlib_versions, download_online_stdlib
+from generator.stdlib_generator import generate_stdlib, list_stdlib_versions, download_online_stdlib
 from generator import propagate_java_data, collect_java_data, generate_python_files
 from utils import tree, fio
 from cli import progress_counter
