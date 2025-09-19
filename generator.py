@@ -96,7 +96,7 @@ def collect_java_data(file: str, base_path: str, path: list[str]) -> None:
                 # TODO : Implement nested class handling
                 class_obj = classes[node.name]
                 if not type_resolver.resolve_type(class_obj.name):
-                    type_resolver.add_type(class_obj., class_obj.name, path)
+                    pass
 
                 # Member variables
                 for path, node in file_tree.filter(javalang.parser.tree.FieldDeclaration):
