@@ -1,18 +1,13 @@
 from __future__ import annotations
 
 import textwrap
-from collections import defaultdict
 
+from collections import defaultdict
 from java_model.jash_annotation import JashAnnotation
 from java_model.jash_method import JashMethod
 from java_model.jash_type import JashType
 from java_model.jash_variable import JashVariable
 from utils.utils import str_default, format_documentation
-<<<<<<< HEAD
-=======
-from utils.utils import condense_imports
-from generator.generator_options import import_req
->>>>>>> 229b316b13305f0f30de5d020d97aaa829200cce
 
 
 class JashClass:

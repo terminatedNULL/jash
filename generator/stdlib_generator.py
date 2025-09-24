@@ -124,14 +124,6 @@ def generate_stdlib(source_dir: str, dest_dir: str) -> None:
             counter.increment()
     counter.complete()
 
-    # Propagate known data to unknown references
-    print("Propagating java data...")
-    counter = progress_counter.ProgressCounter(t_len)
-    for path, file in tree.iter_tree_files(file_tree):
-        propagate_java_data()
-        counter.increment()
-    counter.complete()
-
     # Generate python stub files
     print("Generating python files...")
     generate_python_files(dest_dir)
