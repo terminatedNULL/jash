@@ -291,3 +291,12 @@ def strip_all_comments(java_code: str) -> str:
         return ''
 
     return pattern.sub(replacer, java_code)
+
+def create_import_str(import_list: list[str]) -> str:
+    import_str = ""
+    for path, name in import_list:
+        if name == "*":
+            import_str += f"import {".".join(path)}\n"
+            continue
+        import_str += f"from {".".join(path)} import {name}\n"
+    return import_str

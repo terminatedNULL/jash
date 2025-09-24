@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import textwrap
+from collections import defaultdict
 
 from java_model.jash_annotation import JashAnnotation
 from java_model.jash_method import JashMethod
 from java_model.jash_type import JashType
 from java_model.jash_variable import JashVariable
 from utils.utils import str_default, format_documentation
-from utils.utils import condense_imports
-from generator.generator_options import import_req
 
 
 class JashClass:
@@ -33,16 +32,27 @@ class JashClass:
         self.annotations = _annotations or []
 
     def __str__(self):
+        method_counts = defaultdict(int)
+
+        for entry in self.body:
+            if not isinstance(entry, JashMethod):
+                continue
+
+            method_counts[entry.name] += 1
+
+        seen = defaultdict(int)
+        for entry in self.body:
+            if not isinstance(entry, JashMethod):
+                continue
+
+            seen[entry.name] += 1
+            if method_counts[entry.name] > 1 and seen[entry.name] < method_counts[entry.name]:
+                entry.annotations.append(JashAnnotation("overload", []))
+
+        lines = []
         annotation_str = "\n".join(str(a) for a in self.annotations).strip()
         body_decls = "    " + "\n".join(textwrap.indent(str(b), "    ", lambda line: True) for b in self.body).strip()
         doc = textwrap.indent(self.documentation.strip(), "    ") if self.documentation else ""
-        import_str = "\n".join([f"from {key} import {','.join(value)}"
-                                for key, value in condense_imports(import_req).items()])
-
-        lines = []
-
-        if import_str:
-            lines.append(import_str)
 
         if annotation_str:
             lines.append(annotation_str)

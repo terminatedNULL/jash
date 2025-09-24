@@ -1,4 +1,3 @@
-import_req: dict[str, str] = {}
 """
 Stores the list of required imports for the generated python code.
 

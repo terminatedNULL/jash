@@ -4,9 +4,9 @@ import os
 import tempfile
 import shutil
 
-import generator
+from generator import generator
 from generator.stdlib_generator import generate_stdlib, list_stdlib_versions, download_online_stdlib
-from generator import propagate_java_data, collect_java_data, generate_python_files
+from generator.generator import collect_java_data, generate_python_files
 from utils import tree, fio
 from cli import progress_counter
 from utils.fio import check_file_access
@@ -174,7 +174,7 @@ if __name__ == "__main__":
         t_len = tree.tree_len(file_tree)
         print(f"Total of {t_len} file{'s' if t_len != 1 else ''} from {jar} after filtering.")
 
-        # Collect initial data
+        # Collect data
         print("Collecting initial java data...")
         counter = progress_counter.ProgressCounter(t_len)
         for path, file in tree.iter_tree_files(file_tree):
@@ -182,17 +182,9 @@ if __name__ == "__main__":
             counter.increment()
         counter.complete()
 
-        # Propagate known data to unknown references
-        print("Propagating java data...")
-        counter = progress_counter.ProgressCounter(t_len)
-        for path, file in tree.iter_tree_files(file_tree):
-            propagate_java_data()
-            counter.increment()
-        counter.complete()
-
         # Generate python stub files
         print("Generating python files...")
-        generate_python_files(args.output)
+        generate_python_files(args.output, file_tree)
 
         with open("type_resolver.json", "w") as f:
             f.write(json.dumps(generator.type_resolver.to_dict()))

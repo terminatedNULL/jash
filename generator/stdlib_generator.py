@@ -4,7 +4,7 @@ import shutil
 import requests
 import zipfile
 
-from generator import collect_java_data, propagate_java_data, generate_python_files
+from generator.generator import collect_java_data, generate_python_files
 from utils import tree
 from cli import progress_counter
 from cli.byte_progress_counter import ByteProgressCounter

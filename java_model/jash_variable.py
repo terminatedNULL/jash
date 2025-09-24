@@ -25,7 +25,7 @@ class JashVariable:
         annotation_str = '\n'.join(str(a) for a in self.annotations).rstrip()
         variable_str = (
             f"{self.name}"
-            f"{f': {self.type}' if generator.options.typed else ''}"
+            f"{f': {generator.type_resolver.resolve_type_name(self.type.name)}' if generator.options.typed else ''}"
             f"{' = None # TODO : Initializer' if self.initializer is not None else ''}"
         )
         return f"{annotation_str}\n{variable_str}\n" if annotation_str else f"{variable_str}\n"
