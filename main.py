@@ -4,9 +4,15 @@ import os
 import tempfile
 import shutil
 
+<<<<<<< HEAD
 from generator import generator
 from generator.stdlib_generator import generate_stdlib, list_stdlib_versions, download_online_stdlib
 from generator.generator import collect_java_data, generate_python_files
+=======
+import generator
+from generator.stdlib_generator import generate_stdlib, list_stdlib_versions, download_online_stdlib
+from generator import propagate_java_data, collect_java_data, generate_python_files
+>>>>>>> 229b316b13305f0f30de5d020d97aaa829200cce
 from utils import tree, fio
 from cli import progress_counter
 from utils.fio import check_file_access
